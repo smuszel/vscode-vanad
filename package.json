@@ -2,9 +2,9 @@
 	"name": "helloworld-sample",
 	"displayName": "helloworld-sample",
 	"description": "HelloWorld example for VS Code",
-	"version": "0.0.1",
-	"publisher": "vscode-samples",
-	"repository": "https://github.com/Microsoft/vscode-extension-samples/helloworld-sample",
+	"version": "0.0.1-alpha",
+	"publisher": "smuszel",
+	"repository": "https://github.com/smuszel/vscode-vanad",
 	"engines": {
 		"vscode": "^1.34.0"
 	},
