@@ -1,0 +1,14 @@
+{
+    "name": "name",
+    "version": "1.0.0",
+    "scripts": {
+        "start": "echo 1",
+        "build": "echo 1",
+        "test": "echo 1"
+    },
+    "dependencies": {
+        "vanad": "0.0.3-alpha"
+    },
+    "author": "smuszel",
+    "license": "ISC"
+}
