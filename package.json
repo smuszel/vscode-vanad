@@ -1,9 +1,9 @@
 {
-	"name": "helloworld-sample",
-	"displayName": "helloworld-sample",
-	"description": "HelloWorld example for VS Code",
-	"version": "0.0.1-alpha",
-	"publisher": "smuszel",
+	"name": "vanad",
+	"displayName": "Vanad",
+	"description": "Extesion to automatically run vanad tests",
+	"version": "0.0.5",
+	"publisher": "vanad",
 	"repository": "https://github.com/smuszel/vscode-vanad",
 	"engines": {
 		"vscode": "^1.34.0"
@@ -20,6 +20,10 @@
 			{
 				"command": "extension.main",
 				"title": "Run test with highlighting"
+			},
+			{
+				"command": "extension.killRunningTest",
+				"title": "Kill currently running test"
 			}
         ],
         "colors": [
