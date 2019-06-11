@@ -1,1 +1,3 @@
-module.exports = () => null;
+module.exports = () => {
+    throw new Error('xyz')
+};

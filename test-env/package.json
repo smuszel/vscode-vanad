@@ -2,12 +2,10 @@
     "name": "name",
     "version": "1.0.0",
     "scripts": {
-        "start": "echo 1",
-        "build": "echo 1",
-        "test": "echo 1"
+        "test": "vanad"
     },
     "dependencies": {
-        "vanad": "0.0.3-alpha"
+        "vanad": "0.0.2"
     },
     "author": "smuszel",
     "license": "ISC"

@@ -1,123 +1,159 @@
 import * as vsc from 'vscode';
 import { execFile } from 'child_process';
+import { join } from 'path';
+import { flatMap } from './flatMap';
 
-export function activate(context: vsc.ExtensionContext) {
-    //@ts-ignore
-    let prevState: State = { runningFile: undefined, success: false, editor: vsc.window.activeTextEditor };
-	const statusBar = vsc.window.createStatusBarItem(vsc.StatusBarAlignment.Right, 1010);
-	const failureDecoration = vsc.window.createTextEditorDecorationType({
-		backgroundColor: { id: 'extension.failedTestcaseColor' }
-    });
-    
-    const isActiveVanadDocument = (activeTextEditor: vsc.TextEditor, document: vsc.TextDocument) => {
-        const pragma = document.lineAt(0).text.includes('@vanad');
-        const atePath = activeTextEditor.document.uri.fsPath;
-        const docPath = document.uri.fsPath.split('.git')[0];
+const initial = () => ({
+    runningTests: undefined,
+    results: [],
+    errors: [],
+});
 
-        return atePath === docPath && pragma;
-    }
+let state: State = initial();
 
-	const runTest = (editor: vsc.TextEditor) => {
-        const path = editor.document.uri.fsPath;
-        const runningFile = execFile('node', [path]);
-        let testcaseFailures: any[] = [];
-        
-        runningFile.stdout.on('data', chunk => {
-            const str = chunk.toString();
+const render = (state: State, items: ExtensionItems) => {
+    const failedResults = state.results.filter(x => x.diff);
+    const ate = items.ate;
 
-            if (str) {
-                const testInfo = JSON.parse(str);
-                testcaseFailures.push(testInfo);
-            }
-        });
+    if (ate) {
+        const failureRanges = flatMap(failedResults, result => {
+            const docPath = ate.document.uri.fsPath;
+            const matchedCallers = result.callers.filter(c => docPath === c.path);
 
-        runningFile.on('close', () => {
-            if (!runningFile.killed) {
-                const success = !testcaseFailures.length;
-                update({ editor, runningFile: undefined, testcaseFailures, success });
-            }
-        });
-        
-        update({ editor, runningFile, testcaseFailures, success: false });
-	};
-
-	const update = (state: State) => {
-		if (state.runningFile) {
-			statusBar.text = '$(sync~spin) Running tests...';
-			statusBar.show();
-        } else if (state.testcaseFailures.length) {
-            const failureRanges = state.testcaseFailures.map(fail => {
-                const callerLine = state.editor.document.lineAt(fail.callerLine - 1);
-                const startIx = callerLine.firstNonWhitespaceCharacterIndex;
-                const rangeStart = callerLine.range.start.translate(0, startIx);
-                const rangeEnd = callerLine.range.end;
+            const failureRanges = matchedCallers.map(caller => {
+                const editorLine = ate.document.lineAt(caller.line - 1);
+                const startIx = editorLine.firstNonWhitespaceCharacterIndex;
+                const rangeStart = editorLine.range.start.translate(0, startIx);
+                const rangeEnd = editorLine.range.end;
                 const range = new vsc.Range(rangeStart, rangeEnd);
-                const hoverMessage = { language: 'javascript', value: fail.diff };
-
+                const isTestDeclarationLine = editorLine.text.includes(result.title);
+                const hov = {
+                    language: 'javascript',
+                    value: result.diff || '',
+                };
+                const hoverMessage = isTestDeclarationLine ? undefined : hov;
                 return { range, hoverMessage };
             });
 
-            state.editor.setDecorations(failureDecoration, failureRanges);
-            statusBar.text = '$(alert) Testcases failed: ' + failureRanges.length;
-            statusBar.show();
-        } else if (state.success) {
-			statusBar.text = '$(check) All testcases passed';
-            statusBar.show();
+            return failureRanges;
+        });
+        ate.setDecorations(items.failureDecoration, failureRanges);
+    }
+
+    const statusBar = items.statusBar;
+
+    if (state.runningTests) {
+        statusBar.text = '$(sync~spin) Running tests...';
+        statusBar.show();
+    } else if (failedResults.length) {
+        statusBar.text = '$(alert) Testcases failed: ' + failedResults.length;
+        statusBar.show();
+    } else if (state.results.length) {
+        statusBar.text = '$(check) All testcases passed';
+        statusBar.show();
+    } else {
+        statusBar.hide();
+    }
+};
+
+export function activate(context: vsc.ExtensionContext) {
+    const statusBar = vsc.window.createStatusBarItem(vsc.StatusBarAlignment.Right, 1010);
+    const failureDecoration = vsc.window.createTextEditorDecorationType({
+        backgroundColor: { id: 'extension.failedTestcaseColor' },
+    });
+
+    const setState = (_state = state) => {
+        state = _state;
+        render(_state, {
+            statusBar,
+            failureDecoration,
+            ate: vsc.window.activeTextEditor,
+        });
+    };
+
+    const stopTests = (runningTests: ChildProcess) => {
+        runningTests.kill();
+        setState({ ...state, runningTests: undefined });
+    };
+
+    const runTests = () => {
+        const f = (vsc.workspace.workspaceFolders || [])[0];
+        const p = f && join(f.uri.fsPath, 'node_modules', 'vanad', 'bin', 'vanad.js');
+        const path = p || '';
+        const verbosity = '--verbosity=full';
+        const cwd = '--cwd=' + f.uri.fsPath;
+        const runningTests = execFile('node', [path, verbosity, cwd]);
+
+        setState({
+            runningTests,
+            results: [],
+            errors: [],
+        });
+        let i = 0;
+        runningTests.stdout.on('data', chunk => {
+            const lines = chunk.toString().split('\n');
+            const testInfo = lines.filter(Boolean).map(l => JSON.parse(l));
+            setState({ ...state, results: [...state.results, ...testInfo] });
+        });
+
+        runningTests.stderr.on('data', chunk => {
+            setState({ ...state, errors: [...state.errors, chunk.toString()] });
+        });
+
+        runningTests.on('close', () => {
+            setState({ ...state, runningTests: undefined });
+        });
+    };
+
+    const resetStatus = () => {
+        setState(initial());
+    };
+
+    const _runTests = () => {
+        if (state.runningTests) {
+            vsc.window.showInformationMessage('Tests are already running');
         } else {
-			state.editor.setDecorations(failureDecoration, []);
-			statusBar.hide();
+            setTimeout(() => {
+                runTests();
+            }, 200);
         }
+    };
 
-        prevState = state;
-	};
-
-	const mainCommand = vsc.commands.registerCommand('extension.main', async () => {
-		const ate = vsc.window.activeTextEditor;
-
-		if (ate) {
-			const pragma = ate.document.lineAt(0).text.includes('@vanad');
-			!pragma &&
-				(await ate.edit(eb => {
-					eb.insert(new vsc.Position(0, 0), '// @vanad\n');
-				}));
-			runTest(ate);
-		}
-    });
-    
-	const killTestRunCommand = vsc.commands.registerCommand('extension.killRunningTest', async () => {
-		const ate = vsc.window.activeTextEditor;
-
-        if (ate && prevState.runningFile) {
-            prevState.runningFile.kill();
-            update({ editor: ate, runningFile: undefined, testcaseFailures: [], success: false });
-		}
-	});
-
-	const textChange = vsc.workspace.onDidChangeTextDocument(ev => {
-        const ate = vsc.window.activeTextEditor;
-
-		if (ate && isActiveVanadDocument(ate, ev.document)) {
-			runTest(ate);
-		} else if (ate) {
-			update({ editor: ate, runningFile: undefined, testcaseFailures: [], success: false });
+    const _stopTests = () => {
+        if (state.runningTests) {
+            stopTests(state.runningTests);
+        } else {
+            vsc.window.showInformationMessage('Cannot stop since tests are not running');
         }
+    };
+
+    const _resetStatus = () => {
+        if (state.runningTests) {
+            _stopTests();
+        }
+        resetStatus();
+    };
+
+    const reg = vsc.commands.registerCommand;
+    const runTestsCommand = reg('extension.runTests', _runTests);
+    const stopTestsCommand = reg('extension.stopTests', _stopTests);
+    const resetStatusCommand = reg('extension.resetStatus', _resetStatus);
+
+    const onTextSave = vsc.workspace.onDidSaveTextDocument(() => {
+        vsc.commands.executeCommand('extension.runTests');
     });
-    
-    vsc.workspace.onDidOpenTextDocument(doc => {
-        const ate = vsc.window.activeTextEditor;
 
-		if (ate && isActiveVanadDocument(ate, doc) && !prevState.runningFile) {
-			setTimeout(() => runTest(ate), 0);
-		}
-    })
+    const onTextChange = vsc.workspace.onDidChangeTextDocument(() => {
+        vsc.commands.executeCommand('extension.resetStatus');
+    });
 
-	const textSave = vsc.workspace.onDidSaveTextDocument(doc => {
-        const ate = vsc.window.activeTextEditor;
+    setInterval(setState, 100);
 
-		if (ate && isActiveVanadDocument(ate, doc) && !prevState.runningFile) {
-			setTimeout(() => runTest(ate), 0);
-		}
-	});
-
-	context.subscriptions.push(mainCommand, killTestRunCommand, textChange, textSave);
+    context.subscriptions.push(
+        runTestsCommand,
+        stopTestsCommand,
+        resetStatusCommand,
+        onTextSave,
+        onTextChange,
+    );
 }

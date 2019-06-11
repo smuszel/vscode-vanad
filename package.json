@@ -18,15 +18,19 @@
 	"contributes": {
 		"commands": [
 			{
-				"command": "extension.main",
-				"title": "Run test with highlighting"
+				"command": "extension.runTests",
+				"title": "Run tests with error highlighting"
 			},
 			{
-				"command": "extension.killRunningTest",
-				"title": "Kill currently running test"
+				"command": "extension.stopTests",
+				"title": "Stop currently running tests"
+			},
+			{
+				"command": "extension.resetStatus",
+				"title": "Reset status to initial. Clears highlighting and hides status bar"
 			}
-        ],
-        "colors": [
+		],
+		"colors": [
 			{
 				"id": "extension.failedTestcaseColor",
 				"description": "Background decoration color for failed testcase",
