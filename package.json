@@ -28,6 +28,10 @@
 			{
 				"command": "extension.resetStatus",
 				"title": "Reset status to initial. Clears highlighting and hides status bar"
+			},
+			{
+				"command": "extension.toggleWatching",
+				"title": "Toggle watch mode"
 			}
 		],
 		"colors": [

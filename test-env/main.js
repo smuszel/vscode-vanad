@@ -1,3 +1,3 @@
 module.exports = () => {
-    throw new Error('xyz')
+    // throw new Error('xyz')
 };

@@ -21,6 +21,7 @@ type ExtensionItems = {
 };
 
 type State = {
+    watching: boolean;
     results: TestcaseResult[];
     errors: string[];
     runningTests?: ChildProcess;

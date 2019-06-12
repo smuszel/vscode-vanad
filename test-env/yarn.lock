@@ -418,10 +418,10 @@ time-zone@^1.0.0:
   version "1.0.0"
   resolved "https://registry.yarnpkg.com/time-zone/-/time-zone-1.0.0.tgz#99c5bf55958966af6d06d83bdf3800dc82faec5d"
 
-vanad@0.0.2:
-  version "0.0.2"
-  resolved "https://registry.yarnpkg.com/vanad/-/vanad-0.0.2.tgz#82be8659a66e7acc1cc6b595b700c8bef2c99ce7"
-  integrity sha512-tX8myJmJXMe/tanD8aR3aT004v3G3mZeWCJfshu9Slhy2+kC3cY1ONx7pRVqmXhiQmU+VR9EJu9U6lq1Aag8tQ==
+vanad@0.0.3:
+  version "0.0.3"
+  resolved "https://registry.yarnpkg.com/vanad/-/vanad-0.0.3.tgz#7843ff8eea586e5b9b404b0fb2cf98b7c0fc9db2"
+  integrity sha512-eXMlkB6mpZ2NSylgQsy3umfX20aNnKuJ9FgeHCAZFbZRAtJwrEbjfBrOQUvvjCDS1BO+qD6fzEi8xzVw9GL57Q==
   dependencies:
     concordance "^4.0.0"
     glob "^7.1.4"
