@@ -63,19 +63,27 @@ const render = (state: State, items: ExtensionItems) => {
     }
 
     const statusBar = items.statusBar;
+    let text: string;
 
     if (state.runningTests) {
-        statusBar.text = '$(sync~spin) Running tests...';
+        text = '$(sync~spin) Running tests...';
     } else if (state.errors.length) {
-        statusBar.text = '$(alert) Errors encountered';
+        text = '$(alert) Errors encountered';
     } else if (failedResults.length) {
-        statusBar.text = '$(alert) Testcases failed: ' + failedResults.length;
+        text = '$(alert) Testcases failed: ' + failedResults.length;
     } else if (state.results.length) {
-        statusBar.text = '$(check) All testcases passed';
+        text = '$(check) All testcases passed';
     } else if (state.watching) {
-        statusBar.text = '$(eye) Watching';
+        text = '$(eye) Watching';
     } else {
-        statusBar.text = 'idle';
+        text = '';
+    }
+
+    if (text) {
+        statusBar.show();
+        statusBar.text = text;
+    } else {
+        statusBar.hide();
     }
 };
 
@@ -137,63 +145,46 @@ export function activate(context: vsc.ExtensionContext) {
         });
     };
 
-    const resetStatus = () => {
-        setState(initial());
+    const commands = {
+        runTests: () => {
+            if (state.value.runningTests) {
+                vsc.window.showInformationMessage('Tests are already running');
+            } else {
+                runTests();
+            }
+        },
+        stopTests: () => {
+            const rt = state.value.runningTests;
+            if (rt) {
+                stopTests(rt);
+            } else {
+                vsc.window.showInformationMessage(
+                    'Cannot stop since tests are not running',
+                );
+            }
+        },
+        toggleWatching: () => {
+            setState({ ...state.value, watching: !state.value.watching });
+        },
+        resetHighlighting: () => {
+            setState({ ...state.value, errors: [], results: [] });
+        },
     };
 
-    const _runTests = () => {
-        if (state.value.runningTests) {
-            vsc.window.showInformationMessage('Tests are already running');
-        } else {
-            runTests();
-        }
-    };
-
-    const _stopTests = () => {
-        const rt = state.value.runningTests;
-        if (rt) {
-            stopTests(rt);
-        } else {
-            vsc.window.showInformationMessage('Cannot stop since tests are not running');
-        }
-    };
-
-    const _resetHighlighting = () => {
-        setState({ ...state.value, errors: [], results: [] });
-    };
-
-    const _toggleWatching = () => {
-        setState({ ...state.value, watching: !state.value.watching });
-    };
-
-    const reg = vsc.commands.registerCommand;
-    const runTestsCommand = reg('extension.runTests', _runTests);
-    const toggleWatchingCommand = reg('extension.toggleWatching', _toggleWatching);
-    const stopTestsCommand = reg('extension.stopTests', _stopTests);
-    const resetHighlightingCommand = reg(
-        'extension.resetHighlighting',
-        _resetHighlighting,
-    );
+    const registeredCommands = Object.entries(commands).map(kv => {
+        return vsc.commands.registerCommand(...kv);
+    });
 
     const onTextSave = vsc.workspace.onDidSaveTextDocument(() => {
         state.value.watching && vsc.commands.executeCommand('extension.runTests');
     });
 
     const onTextChange = vsc.workspace.onDidChangeTextDocument(() => {
-        // setTimeout(() => {
         !state.value.runningTests &&
             vsc.commands.executeCommand('extension.resetHighlighting');
-        // }, 200);
     });
 
     setInterval(setState, 100);
     statusBar.show();
-    context.subscriptions.push(
-        runTestsCommand,
-        stopTestsCommand,
-        resetHighlightingCommand,
-        toggleWatchingCommand,
-        onTextSave,
-        onTextChange,
-    );
+    context.subscriptions.push(...registeredCommands, onTextSave, onTextChange);
 }
