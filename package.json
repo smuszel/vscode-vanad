@@ -2,7 +2,7 @@
 	"name": "vanad",
 	"displayName": "Vanad",
 	"description": "Extesion to automatically run vanad tests",
-	"version": "0.0.5",
+	"version": "0.0.7",
 	"publisher": "vanad",
 	"repository": "https://github.com/smuszel/vscode-vanad",
 	"engines": {
@@ -47,7 +47,8 @@
 		]
 	},
 	"scripts": {
-		"vscode:prepublish": "npm run compile",
+		"prepublish": "npm run compile && vsce package -o vanad.vsix",
+		"publish": "vsce publish --packagePath vanad.vsix",
 		"compile": "tsc -p ./",
 		"lint": "tslint -p ./",
 		"watch": "tsc -watch -p ./"
