@@ -164,15 +164,22 @@ export function activate(context: vsc.ExtensionContext) {
             }
         },
         toggleWatching: () => {
-            setState({ ...state.value, watching: !state.value.watching });
+            const rt = state.value.runningTests;
+            rt && stopTests(rt);
+            setState({
+                ...state.value,
+                errors: [],
+                results: [],
+                watching: !state.value.watching,
+            });
         },
         resetHighlighting: () => {
             setState({ ...state.value, errors: [], results: [] });
         },
     };
 
-    const registeredCommands = Object.entries(commands).map(kv => {
-        return vsc.commands.registerCommand(...kv);
+    const registeredCommands = Object.entries(commands).map(([n, f]) => {
+        return vsc.commands.registerCommand('extension.' + n, f);
     });
 
     const onTextSave = vsc.workspace.onDidSaveTextDocument(() => {
