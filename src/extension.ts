@@ -120,11 +120,10 @@ export function activate(context: vsc.ExtensionContext) {
     };
 
     const runTests = () => {
-        const f = (vsc.workspace.workspaceFolders || [])[0];
-        const p = f && join(f.uri.fsPath, 'node_modules', 'vanad', 'bin', 'vanad.js');
-        const path = p || '';
+        const root = (vsc.workspace.workspaceFolders || [])[0];
+        const path = root ? join(root.uri.fsPath, 'node_modules', 'vanad', 'bin', 'vanad.js') : '';
         const verbosity = '--verbosity=full';
-        const cwd = '--cwd=' + f.uri.fsPath;
+        const cwd = '--cwd=' + root.uri.fsPath;
         const runningTests = execFile('node', [path, verbosity, cwd]);
 
         runningTests.stdout.on('data', chunk => {
