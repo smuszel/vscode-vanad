@@ -2,7 +2,7 @@
 	"name": "vanad",
 	"displayName": "Vanad",
 	"description": "Extesion to automatically run vanad tests",
-	"version": "0.0.7",
+	"version": "0.0.8",
 	"publisher": "vanad",
 	"repository": "https://github.com/smuszel/vscode-vanad",
 	"engines": {
